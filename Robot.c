@@ -1,4 +1,4 @@
-// First version of robot software (only data)
+// First version of robot software with movement
 
 #include <Wire.h>
 #include <LSM303.h>
@@ -21,7 +21,12 @@
 #define SR04_LEFT_ECHO      14
 #define SR04_LEFT_TRIG      15
 #define LSM303D_ADDR      0x3a
-#define ANGLE_NORTH        115
+#define ANGLE_NORTH        125
+#define ANGLE_OFFSET         4
+#define DISTANCE_OFFSET      5
+#define LEFT_OFFSET          7
+#define RIGHT_OFFSET         7
+#define BACK_OFFSET         21
 
 LSM303 compass;
 
@@ -84,7 +89,6 @@ void leftMotorMove(int _iL){ // (F) Setting up speed and direction of left motor
   
   _iL = map(_iL, 0, 100, 0, MOTOR_PWM_MAX);
   analogWrite(L_MOTOR_PWM, _iL);
-  Serial.println(_iL);
 }
 
 void rightMotorMove(int _iR){ // (F)  Setting up speed and direction of right motor
@@ -96,8 +100,6 @@ void rightMotorMove(int _iR){ // (F)  Setting up speed and direction of right mo
  
   _iR = map(_iR, 0, 100, 0, MOTOR_PWM_MAX);
   analogWrite(R_MOTOR_PWM, _iR);
-  Serial.print(" Right ");
-  Serial.println(_iR);
 }
 
 void stopMotors(void){ // (F) Motors stop
@@ -134,7 +136,7 @@ void backward (int _iSpeed, int _iTime = 200){ // (F) Move robot backward
   stopMotors();
 }
 
-int getDistance(int _iPin_TRIG,int _iPin_ECHO){ // (F) Get distance from echo sensor
+int getDistance (int _iPin_TRIG,int _iPin_ECHO){ // (F) Get distance from echo sensor
   long _lTime, _lDistance;
 
   digitalWrite(_iPin_TRIG, LOW);
@@ -149,7 +151,7 @@ int getDistance(int _iPin_TRIG,int _iPin_ECHO){ // (F) Get distance from echo se
   return _lDistance;
 }
 
-void compassPing(void){
+void compassPing (void){
   compass.read();
   float _a_x = compass.a.x * 2.0f / 32678.0f;
   float _a_y = compass.a.y * 2.0f / 32678.0f;
@@ -164,21 +166,20 @@ void compassPing(void){
   Serial.println(heading);
 }
 
-void headNorth(void){
+void headNorth (void){
   int _iS;
   
   compass.read();
   float heading = compass.heading();
 
-  while(heading > (ANGLE_NORTH + 10) || heading < (ANGLE_NORTH - 10)){
-    if(heading > (ANGLE_NORTH + 10)){
-      _iS = map(heading, (ANGLE_NORTH + 10), 360, 65, 100);
-      Serial.print(" Left ");
+  while(heading > (ANGLE_NORTH + ANGLE_OFFSET) || heading < (ANGLE_NORTH - ANGLE_OFFSET)){
+    if(heading > (ANGLE_NORTH + ANGLE_OFFSET)){
+      _iS = map(heading, (ANGLE_NORTH + ANGLE_OFFSET), 360, 65, 100);
       turnLeft(_iS, 25);
     }
     else{
-      if(heading < (ANGLE_NORTH - 10)){
-        _iS = map(heading, 0, (ANGLE_NORTH - 10), 100, 65);
+      if(heading < (ANGLE_NORTH - ANGLE_OFFSET)){
+        _iS = map(heading, 0, (ANGLE_NORTH - ANGLE_OFFSET), 100, 65);
         turnRight(_iS, 25);
       }
     }
@@ -187,24 +188,54 @@ void headNorth(void){
   }
 }
 
+void goalXY (int _iX, int _iY){
+  int _iActualX, _iActualY, _iD, _iXg = 0, _iYg = 0;
+
+  while(1){
+    headNorth();
+    delay(1000);
+    
+    _iActualY = getDistance(SR04_FRONT_TRIG, SR04_FRONT_ECHO);
+    if(_iActualY > (_iY+DISTANCE_OFFSET) && _iYg == 0){
+      _iD = map((_iActualY-_iY), 0, 230, 65, 100);
+      forward(_iD);
+   }
+   else {
+      if(_iActualY < (_iY-DISTANCE_OFFSET) && _iYg == 0){
+         _iD = map((_iY-_iActualY), 0, 230, 65, 100);
+        backward(_iD);
+     }
+     else _iYg = 1;
+    }
+
+    _iActualX = getDistance(SR04_LEFT_TRIG, SR04_LEFT_ECHO);
+     if(_iActualX > (_iX+DISTANCE_OFFSET) && _iXg == 0){
+      _iD = map((_iActualX-_iX), 0, 115, 65, 100);
+      turnLeft(75);
+      forward(_iD);
+      turnRight(75);
+   }
+   else {
+      if(_iActualX < (_iX-DISTANCE_OFFSET) && _iXg == 0){
+         _iD = map((_iX-_iActualX), 0, 115, 65, 100);
+       turnRight(75);
+       forward(_iD);
+       turnLeft(75);
+     }
+     else _iXg = 1;
+    }
+
+    if (_iXg == 1 && _iYg == 1) break;
+  }
+  
+}
+
 
 void loop() {
-  int _iTargetF, _iTargetB, _iTargetL, _iTargetR;
-  
-  
-  Serial.print(getDistance(SR04_FRONT_TRIG, SR04_FRONT_ECHO));
-  Serial.println(" cm front");
-  Serial.print(getDistance(SR04_BACK_TRIG, SR04_BACK_ECHO));
-  Serial.println(" cm back");
-  Serial.print(getDistance(SR04_RIGHT_TRIG, SR04_RIGHT_ECHO));
-  Serial.println(" cm right");
-  Serial.print(getDistance(SR04_LEFT_TRIG, SR04_LEFT_ECHO));
-  Serial.println(" cm left");
-  
 
-  compassPing();
-  
-  headNorth();
+  //compassPing();
+
+  goalXY(75, 50);
   
   delay(2000);
 }
