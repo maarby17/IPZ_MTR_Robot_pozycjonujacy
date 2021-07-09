@@ -5,7 +5,7 @@ Celem projektu jest zbudowanie i zaprogramowanie robota określającego swoje po
 Projekt będzie zbudowany na platformie arduino UNO, a komunikacja wifi będzie się odbywała przez moduł ESP32. Czujniki odległosći to HY-SRF05.
 
 Db diagram:
-<iframe width="560" height="315" src='https://dbdiagram.io/embed/60583065ecb54e10c33c8e32'> </iframe>
+<img src="./dbDiagram.jpg">
 
 Robot sterowany jest przez stronę internetową połączoną z serwerem, tam mogą być dodawane i usuwane kolejne roboty. Może też zostać zlecone polecenie ustawienie się robota w danym punkcie mapy. Dane mapy opartej na rzeczywistym pomieszczeniu są przesyłane do robobot z bazy SQL. Robot na tej podstawie określa swoje położenie i jest w stanie udać się do wyznaczonego punktu. Urządzenie może być również uruchamiane i wyłączane za pomocą aplikacji na system android, Która łączy się z serwerem, następnie informacja przesyłana jest do robota.
 
